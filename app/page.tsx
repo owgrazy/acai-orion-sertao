@@ -1,65 +1,271 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import AppHeader from "@/components/AppHeader";
+import { supabase } from "@/lib/supabaseClient";
+import { ui } from "@/lib/ui";
+
+function getYouTubeEmbed(url: string) {
+  try {
+    const u = new URL(url);
+
+    if (u.hostname.includes("youtu.be")) {
+      const id = u.pathname.replace("/", "");
+      return id ? `https://www.youtube.com/embed/${id}` : "";
+    }
+
+    if (u.hostname.includes("youtube.com")) {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+export default function HomePage() {
+  const [loading, setLoading] = useState(true);
+  const [isLogged, setIsLogged] = useState(false);
+  const [name, setName] = useState("");
+  const [videoOpen, setVideoOpen] = useState(false);
+
+  // Troque aqui pelo link que você quiser
+  const howToOrderUrl =
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+  const embedUrl = useMemo(() => getYouTubeEmbed(howToOrderUrl), [howToOrderUrl]);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+
+      if (!user) {
+        setIsLogged(false);
+        setName("");
+        setLoading(false);
+        return;
+      }
+
+      setIsLogged(true);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setName(
+        profile?.full_name ||
+          (user.user_metadata?.full_name as string) ||
+          (user.email?.split("@")[0] ?? "cliente")
+      );
+
+      setLoading(false);
+    })();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <>
+      <AppHeader />
+
+      <main style={ui.appBg}>
+        <section style={{ ...ui.page, paddingTop: 36, paddingBottom: 28 }}>
+          <div style={ui.sectionSoft}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: "#d7b7ff",
+                letterSpacing: 0.6,
+                textTransform: "uppercase",
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              {loading ? "Carregando" : isLogged ? `Olá, ${name}` : "Bem-vindo"}
+            </div>
+
+            <h1
+              style={{
+                margin: "10px 0 8px",
+                fontSize: 32,
+                lineHeight: 1.1,
+                color: "#ffffff",
+              }}
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+              Peça seu açaí sem sofrimento
+            </h1>
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: 16,
+                lineHeight: 1.6,
+                color: "#f1e8ff",
+                maxWidth: 680,
+              }}
+            >
+              Monte seu pedido, escolha entrega ou retirada, acompanhe o status e mande tudo direto no WhatsApp.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 18,
+              }}
+            >
+              {!loading && !isLogged ? (
+                <>
+                  <a href="/menu" style={{ ...ui.buttonPrimary, textDecoration: "none" }}>
+                    Fazer pedido sem login
+                  </a>
+
+                  <a href="/login" style={{ ...ui.buttonSecondary, textDecoration: "none" }}>
+                    Entrar / cadastrar
+                  </a>
+                </>
+              ) : null}
+
+              {!loading && isLogged ? (
+                <>
+                  <a href="/menu" style={{ ...ui.buttonPrimary, textDecoration: "none" }}>
+                    Ir para o cardápio
+                  </a>
+
+                  <a href="/my-orders" style={{ ...ui.buttonSecondary, textDecoration: "none" }}>
+                    Meus pedidos
+                  </a>
+
+                  <a href="/account" style={{ ...ui.buttonSecondary, textDecoration: "none" }}>
+                    Minha conta
+                  </a>
+
+                  <a href="/admin/store" style={ui.buttonSecondary}> Horário da loja</a>
+                </>
+              ) : null}
+
+              <button onClick={() => setVideoOpen(true)} style={ui.buttonSecondary}>
+                Como pedir
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          style={{
+            ...ui.page,
+            paddingTop: 0,
+            paddingBottom: 40,
+            display: "grid",
+            gap: 14,
+          }}
+        >
+          <div style={ui.card}>
+            <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>Como pedir</h2>
+            <p style={{ margin: "8px 0 0", lineHeight: 1.6, color: "#ece1ff" }}>
+              Escolha os itens, preencha os dados, envie no WhatsApp e acompanhe pelo link do pedido.
+            </p>
+          </div>
+
+          <div style={ui.card}>
+            <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>
+              {isLogged ? "Você já está com tudo pronto" : "Login não é obrigatório"}
+            </h2>
+            <p style={{ margin: "8px 0 0", lineHeight: 1.6, color: "#ece1ff" }}>
+              {isLogged
+                ? "Como você já entrou, seus dados e seus pedidos ficam mais fáceis de acompanhar."
+                : "Você pode pedir sem login. Mas, se entrar, depois a experiência fica mais rápida."}
+            </p>
+          </div>
+
+          <div style={ui.card}>
+            <h2 style={{ margin: 0, fontSize: 18, color: "#fff" }}>Acompanhe o pedido</h2>
+            <p style={{ margin: "8px 0 0", lineHeight: 1.6, color: "#ece1ff" }}>
+              Depois de enviar, você recebe um link para acompanhar status como recebido, preparando, pronto e saiu para entrega.
+            </p>
+          </div>
+        </section>
       </main>
-    </div>
+
+      {videoOpen ? (
+        <div
+          onClick={() => setVideoOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.82)",
+            display: "grid",
+            placeItems: "center",
+            padding: 18,
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 820,
+              background: "linear-gradient(135deg, rgba(38,16,60,0.98), rgba(17,11,26,0.98))",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 14 }}>
+              <b style={{ color: "#fff" }}>Como pedir</b>
+              <button onClick={() => setVideoOpen(false)} style={ui.buttonGhost}>
+                X
+              </button>
+            </div>
+
+            <div style={{ padding: 14 }}>
+              {embedUrl ? (
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    paddingTop: "56.25%",
+                    borderRadius: 16,
+                    overflow: "hidden",
+                  }}
+                >
+                  <iframe
+                    src={embedUrl}
+                    title="Como pedir"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ color: "#ece1ff", lineHeight: 1.6 }}>
+                  <p>Esse link não é do YouTube para incorporar direto no site.</p>
+                  <a
+                    href={howToOrderUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ ...ui.buttonPrimary, textDecoration: "none", display: "inline-block" }}
+                  >
+                    Abrir vídeo
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
