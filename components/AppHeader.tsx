@@ -115,7 +115,7 @@ export default function AppHeader() {
     }}
   />
   <span style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>
-    Açaí Órion
+    Açaí Órion Sertão
   </span>
 </a>
 
