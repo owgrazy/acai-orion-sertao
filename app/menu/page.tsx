@@ -1,5 +1,5 @@
 "use client";
-
+import { makeId } from "@/lib/id";
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import RadioPill from "@/components/ui/RadioPill";
@@ -265,7 +265,7 @@ export default function MenuPage() {
 
       for (let i = 0; i < qty; i++) {
         const item: CartItem = {
-          id: crypto.randomUUID(),
+          id: makeId(),
           mode: itemMode,
           milkshakeFlavorId: product.id,
           milkshakeFlavorLabel: product.name || "",
@@ -322,7 +322,7 @@ export default function MenuPage() {
     const size = sizes.find((x) => x.id === sizeId);
 
     const item: CartItem = {
-      id: crypto.randomUUID(),
+      id: makeId(),
       mode,
 
       sizeId,
