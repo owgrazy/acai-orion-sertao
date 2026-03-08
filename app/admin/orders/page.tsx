@@ -24,6 +24,7 @@ type OrderItem = {
   paidExtrasUnitPrice?: number;
   milkshakeFlavorId?: string;
   milkshakeFlavorLabel?: string;
+  readyProductType?: "milkshake" | "bebida" | "combo" | "outro";
 };
 
 type OrderRow = {
@@ -136,10 +137,16 @@ function statusChipStyle(status: string): React.CSSProperties {
   };
 }
 
-function itemLabel(mode: OrderItem["mode"]) {
-  if (mode === "acai") return "Açaí";
-  if (mode === "sorvete") return "Sorvete";
-  if (mode === "mix") return "Açaí + Sorvete";
+function itemLabel(item: OrderItem) {
+  if (item.mode === "acai") return "Açaí";
+  if (item.mode === "sorvete") return "Sorvete";
+  if (item.mode === "mix") return "Açaí + Sorvete";
+
+  if (item.readyProductType === "milkshake") return "Milkshake";
+  if (item.readyProductType === "bebida") return "Bebida";
+  if (item.readyProductType === "combo") return "Combo";
+  if (item.readyProductType === "outro") return "Outros produtos";
+
   return "Produto";
 }
 
@@ -541,8 +548,14 @@ export default function AdminOrdersPage() {
 
             return `
               <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px dashed #999;">
-                <strong>${idx + 1}) ${itemLabel(it.mode)}</strong><br/>
-                ${it.mode === "milkshake" ? `<div><b>Produto:</b> ${it.milkshakeFlavorLabel || "-"}</div>` : ""}
+                <strong>${idx + 1}) ${itemLabel(it)}</strong><br/>
+                ${
+                  it.mode === "milkshake"
+                    ? `<div><b>${
+                        it.readyProductType === "milkshake" ? "Sabor" : "Produto"
+                      }:</b> ${it.milkshakeFlavorLabel || "-"}</div>`
+                    : ""
+                }
                 ${it.sizeLabel ? `<div><b>Tamanho:</b> ${it.sizeLabel}</div>` : ""}
                 ${(it.mode === "acai" || it.mode === "mix") ? `<div><b>Açaí:</b> ${it.acaiTypeLabel || "-"}</div>` : ""}
                 ${(it.mode === "sorvete" || it.mode === "mix") ? `<div><b>Sorvetes:</b> ${(it.sorveteLabels || []).join(", ") || "-"}</div>` : ""}
@@ -812,13 +825,16 @@ export default function AdminOrdersPage() {
                           return (
                             <div key={it.id || idx} style={ui.card}>
                               <div style={{ fontWeight: 800, color: "#fff" }}>
-                                {idx + 1}) {itemLabel(it.mode)}
+                                {idx + 1}) {itemLabel(it)}
                               </div>
 
                               <div style={{ marginTop: 8, lineHeight: 1.6, fontSize: 14, color: "#ece1ff" }}>
                                 {it.mode === "milkshake" ? (
                                   <>
-                                    <div><b>Produto:</b> {it.milkshakeFlavorLabel || "-"}</div>
+                                    <div>
+                                      <b>{it.readyProductType === "milkshake" ? "Sabor" : "Produto"}:</b>{" "}
+                                      {it.milkshakeFlavorLabel || "-"}
+                                    </div>
                                     {it.sizeLabel ? <div><b>Tamanho:</b> {it.sizeLabel}</div> : null}
                                   </>
                                 ) : (

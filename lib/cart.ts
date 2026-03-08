@@ -22,6 +22,8 @@ export type CartItem = {
 
   milkshakeFlavorId?: string;
   milkshakeFlavorLabel?: string;
+
+  readyProductType?: "milkshake" | "bebida" | "combo" | "outro";
 };
 
 const KEY = "orion_cart_v1";
@@ -82,10 +84,15 @@ export function normalizePhoneBR(raw: string) {
   return (raw || "").replace(/\D/g, "");
 }
 
-function labelMode(mode: CartItem["mode"]) {
-  if (mode === "acai") return "Açaí";
-  if (mode === "sorvete") return "Sorvete";
-  if (mode === "mix") return "Açaí + Sorvete";
+function labelMode(item: CartItem) {
+  if (item.mode === "acai") return "Açaí";
+  if (item.mode === "sorvete") return "Sorvete";
+  if (item.mode === "mix") return "Açaí + Sorvete";
+
+  if (item.readyProductType === "bebida") return "Bebida";
+  if (item.readyProductType === "combo") return "Combo";
+  if (item.readyProductType === "outro") return "Outros produtos";
+
   return "Milkshake";
 }
 
@@ -140,14 +147,23 @@ export function buildWhatsAppText(args: {
   lines.push("");
 
   items.forEach((it, idx) => {
-    lines.push(`*${idx + 1}) ${labelMode(it.mode)}*`);
+    lines.push(`*${idx + 1}) ${labelMode(it)}*`);
 
     if (it.mode === "milkshake") {
-      lines.push(`Tamanho: ${it.sizeLabel || "-"}`);
-      lines.push(`Sabor: ${it.milkshakeFlavorLabel || "-"}`);
+      if (it.readyProductType === "milkshake") {
+        lines.push(`Tamanho: ${it.sizeLabel || "-"}`);
+        lines.push(`Sabor: ${it.milkshakeFlavorLabel || "-"}`);
+      } else {
+        lines.push(`Produto: ${it.milkshakeFlavorLabel || "-"}`);
+        if (it.sizeLabel) {
+          lines.push(`Tamanho: ${it.sizeLabel}`);
+        }
+      }
+
       if (typeof it.price === "number") {
         lines.push(`Valor: ${money(it.price)}`);
       }
+
       lines.push("");
       return;
     }

@@ -251,7 +251,7 @@ export default function MenuPage() {
   function addReadyProductMultiple(
     list: Product[],
     qtyMap: Record<string, number>,
-    itemMode: CartItem["mode"]
+    ReadyType: "milkshake" | "bebida" | "combo" | "outro"
   ) {
     const selectedItems = list.filter((p) => (qtyMap[p.id] || 0) > 0);
 
@@ -266,7 +266,8 @@ export default function MenuPage() {
       for (let i = 0; i < qty; i++) {
         const item: CartItem = {
           id: makeId(),
-          mode: itemMode,
+          mode: "milkshake",
+          readyProductType: ReadyType,
           milkshakeFlavorId: product.id,
           milkshakeFlavorLabel: product.name || "",
           sizeLabel: product.size_ml ? `${product.size_ml}ml` : "",
@@ -290,17 +291,17 @@ export default function MenuPage() {
     }
 
     if (mode === "bebida") {
-      addReadyProductMultiple(bebidas, bebidaQty, "milkshake");
+      addReadyProductMultiple(bebidas, bebidaQty, "bebida");
       return;
     }
 
     if (mode === "outro") {
-      addReadyProductMultiple(outros, outroQty, "milkshake");
+      addReadyProductMultiple(outros, outroQty, "outro");
       return;
     }
 
     if (mode === "combo") {
-      addReadyProductMultiple(combos, comboQty, "milkshake");
+      addReadyProductMultiple(combos, comboQty, "combo");
       return;
     }
 

@@ -7,6 +7,27 @@ import { supabase } from "@/lib/supabaseClient";
 import { money, normalizePhoneBR } from "@/lib/cart";
 import { ui } from "@/lib/ui";
 
+type OrderItem = {
+  id: string;
+  mode: "acai" | "sorvete" | "mix" | "milkshake";
+  createdAt: number;
+  sizeId?: string;
+  sizeLabel?: string;
+  price?: number | null;
+  acaiTypeId?: string;
+  acaiTypeLabel?: string;
+  sorveteIds?: string[];
+  sorveteLabels?: string[];
+  extrasIds?: string[];
+  extrasLabels?: string[];
+  allowPaidExtras?: boolean;
+  paidExtrasCount?: number;
+  paidExtrasUnitPrice?: number;
+  milkshakeFlavorId?: string;
+  milkshakeFlavorLabel?: string;
+  readyProductType?: "milkshake" | "bebida" | "combo" | "outro";
+};
+
 type OrderRow = {
   id: string;
   order_code: string | null;
@@ -24,7 +45,7 @@ type OrderRow = {
   status: string;
   status_updated_at: string;
   tracking_code: string;
-  items: any;
+  items: OrderItem[];
 };
 
 function fmtDateTimeBR(iso: string) {
@@ -105,6 +126,19 @@ function stageDone(current: string, target: string) {
   const order = ["novo", "confirmado", "preparando", "pronto", "saiu_para_entrega", "entregue"];
   if (current === "cancelado") return false;
   return order.indexOf(current) >= order.indexOf(target);
+}
+
+function itemLabel(item: OrderItem) {
+  if (item.mode === "acai") return "Açaí";
+  if (item.mode === "sorvete") return "Sorvete";
+  if (item.mode === "mix") return "Açaí + Sorvete";
+
+  if (item.readyProductType === "milkshake") return "Milkshake";
+  if (item.readyProductType === "bebida") return "Bebida";
+  if (item.readyProductType === "combo") return "Combo";
+  if (item.readyProductType === "outro") return "Outros produtos";
+
+  return "Produto";
 }
 
 export default function OrderTrackingPage() {
@@ -326,16 +360,19 @@ export default function OrderTrackingPage() {
 
                     {Array.isArray(order.items) && order.items.length ? (
                       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-                        {order.items.map((it: any, idx: number) => (
+                        {order.items.map((it, idx) => (
                           <div key={it.id || idx} style={ui.card}>
                             <div style={{ fontWeight: 800, color: "#fff" }}>
-                              {idx + 1}) {labelMode(it.mode)}
+                              {idx + 1}) {itemLabel(it)}
                             </div>
 
                             <div style={{ marginTop: 8, lineHeight: 1.65, fontSize: 14, color: "#ece1ff" }}>
                               {it.mode === "milkshake" ? (
                                 <>
-                                  <div><b>Produto:</b> {it.milkshakeFlavorLabel || "-"}</div>
+                                  <div>
+                                    <b>{it.readyProductType === "milkshake" ? "Sabor" : "Produto"}:</b>{" "}
+                                    {it.milkshakeFlavorLabel || "-"}
+                                  </div>
                                   {it.sizeLabel ? <div><b>Tamanho:</b> {it.sizeLabel}</div> : null}
                                 </>
                               ) : (
@@ -378,13 +415,6 @@ export default function OrderTrackingPage() {
       </main>
     </>
   );
-}
-
-function labelMode(mode: string) {
-  if (mode === "acai") return "Açaí";
-  if (mode === "sorvete") return "Sorvete";
-  if (mode === "mix") return "Açaí + Sorvete";
-  return "Produto";
 }
 
 function StageItem({ done, label }: { done: boolean; label: string }) {
