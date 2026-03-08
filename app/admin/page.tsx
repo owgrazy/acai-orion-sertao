@@ -105,6 +105,12 @@ export default function AdminHome() {
               <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>Áreas de delivery</div>
               <div style={{ color: "#ddd0f6", marginTop: 6 }}>Editar bairros, taxas e ordem de exibição.</div>
             </a>
+
+            <a href="/admin/store" style={{ ...ui.card, textDecoration: "none" }}>
+              <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>Horário da Loja</div>
+              <div style={{ color: "#ddd0f6", marginTop: 6 }}>Editar horário</div>
+            </a>
+
           </div>
         </section>
       </main>

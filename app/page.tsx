@@ -145,7 +145,7 @@ export default function HomePage() {
                     Minha conta
                   </a>
 
-                  <a href="/admin/store" style={ui.buttonSecondary}> Horário da loja</a>
+
                 </>
               ) : null}
 
