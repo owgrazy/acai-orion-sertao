@@ -33,7 +33,7 @@ export default function HomePage() {
 
   // Troque aqui pelo link que você quiser
   const howToOrderUrl =
-    "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    "https://youtube.com/shorts/0eiYSCEnTds";
 
   const embedUrl = useMemo(() => getYouTubeEmbed(howToOrderUrl), [howToOrderUrl]);
 
