@@ -5,6 +5,11 @@ import AppHeader from "@/components/AppHeader";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { supabase } from "@/lib/supabaseClient";
 import { ui } from "@/lib/ui";
+import {
+  createProductAction,
+  deleteProductAction,
+  updateProductAction,
+} from "../actions";
 
 type ProductType =
   | "size"
@@ -37,6 +42,20 @@ type Product = {
   is_available: boolean;
   sort_order: number;
 };
+
+type ProductUpdate = Partial<
+  Pick<
+    Product,
+    | "name"
+    | "description"
+    | "category"
+    | "price"
+    | "size_ml"
+    | "extras_limit"
+    | "is_available"
+    | "sort_order"
+  >
+>;
 
 function toNum(v: string) {
   const n = Number(String(v).replace(",", "."));
@@ -110,7 +129,7 @@ export default function AdminProductsPage() {
     const limitNum = toNum(extrasLimit);
     const sortNum = toNum(sortOrder);
 
-    const payload: any = {
+    const payload = {
       type,
       name: name.trim(),
       description: description.trim() || null,
@@ -123,9 +142,9 @@ export default function AdminProductsPage() {
       image_url: null,
     };
 
-    const { error } = await supabase.from("products").insert(payload);
-    if (error) {
-      setErr(error.message);
+    const result = await createProductAction(payload);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
 
@@ -149,10 +168,10 @@ export default function AdminProductsPage() {
     resetForm();
   }
 
-  async function updateProduct(id: string, patch: Partial<Product>) {
-    const { error } = await supabase.from("products").update(patch).eq("id", id);
-    if (error) {
-      setErr(error.message);
+  async function updateProduct(id: string, patch: ProductUpdate) {
+    const result = await updateProductAction(id, patch);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
     load();
@@ -160,9 +179,9 @@ export default function AdminProductsPage() {
 
   async function deleteProduct(id: string) {
     if (!confirm("Apagar esse item?")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) {
-      setErr(error.message);
+    const result = await deleteProductAction(id);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
     load();
@@ -171,20 +190,26 @@ export default function AdminProductsPage() {
   async function uploadImage(prod: Product, file: File) {
     setErr("");
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${prod.id}/${Date.now()}.${ext}`;
+    const formData = new FormData();
+    formData.set("productId", prod.id);
+    formData.set("file", file);
 
-    const { error: upErr } = await supabase.storage
-      .from("product-images")
-      .upload(path, file, { cacheControl: "3600", upsert: true });
+    try {
+      const response = await fetch("/api/admin/product-images", {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json()) as { ok: boolean; error?: string };
 
-    if (upErr) {
-      setErr(upErr.message);
-      return;
+      if (!response.ok || !result.ok) {
+        setErr(result.error || "Não foi possível enviar a imagem.");
+        return;
+      }
+
+      load();
+    } catch {
+      setErr("Não foi possível enviar a imagem.");
     }
-
-    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-    await updateProduct(prod.id, { image_url: data.publicUrl });
   }
 
   return (
@@ -402,7 +427,7 @@ function ProductList({
   items: Product[];
   emptyText: string;
   uploadImage: (prod: Product, file: File) => Promise<void>;
-  updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
+  updateProduct: (id: string, patch: ProductUpdate) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   type: ProductType;
 }) {
@@ -435,7 +460,7 @@ function ProductCard({
 }: {
   product: Product;
   uploadImage: (prod: Product, file: File) => Promise<void>;
-  updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
+  updateProduct: (id: string, patch: ProductUpdate) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   type: ProductType;
 }) {
@@ -587,7 +612,7 @@ function ProductCard({
               defaultValue={String(p.sort_order ?? 0)}
               onBlur={(e) => {
                 const v = toNum(e.target.value);
-                updateProduct(p.id, { sort_order: (v ?? 0) as any });
+                updateProduct(p.id, { sort_order: Math.round(v ?? 0) });
               }}
               style={ui.input}
             />

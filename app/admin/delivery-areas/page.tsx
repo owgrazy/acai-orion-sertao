@@ -5,6 +5,11 @@ import AppHeader from "@/components/AppHeader";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { supabase } from "@/lib/supabaseClient";
 import { ui } from "@/lib/ui";
+import {
+  createDeliveryAreaAction,
+  deleteDeliveryAreaAction,
+  updateDeliveryAreaAction,
+} from "../actions";
 
 type DeliveryArea = {
   id: string;
@@ -65,15 +70,15 @@ export default function DeliveryAreasPage() {
     const feeNum = toNum(fee);
     const sortNum = toNum(sortOrder);
 
-    const { error } = await supabase.from("delivery_areas").insert({
+    const result = await createDeliveryAreaAction({
       name: name.trim(),
       fee: feeNum ?? 0,
       is_active: true,
-      sort_order: sortNum ?? 0,
+      sort_order: Math.round(sortNum ?? 0),
     });
 
-    if (error) {
-      setErr(error.message);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
 
@@ -84,9 +89,9 @@ export default function DeliveryAreasPage() {
   }
 
   async function updateArea(id: string, patch: Partial<DeliveryArea>) {
-    const { error } = await supabase.from("delivery_areas").update(patch).eq("id", id);
-    if (error) {
-      setErr(error.message);
+    const result = await updateDeliveryAreaAction(id, patch);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
     load();
@@ -95,9 +100,9 @@ export default function DeliveryAreasPage() {
   async function deleteArea(id: string) {
     if (!confirm("Apagar essa área?")) return;
 
-    const { error } = await supabase.from("delivery_areas").delete().eq("id", id);
-    if (error) {
-      setErr(error.message);
+    const result = await deleteDeliveryAreaAction(id);
+    if (!result.ok) {
+      setErr(result.error);
       return;
     }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import AppHeader from "@/components/AppHeader"
 import { ui } from "@/lib/ui"
+import { updateStoreSettingsAction } from "../actions"
 
 export default function AdminStorePage(){
 
@@ -33,16 +34,18 @@ async function save(){
 
 setSaving(true)
 
-await supabase
-.from("store_settings")
-.update({
+const result=await updateStoreSettingsAction({
 open_time:open,
 close_time:close,
 force_closed:closed
 })
-.eq("id",1)
 
 setSaving(false)
+
+if(!result.ok){
+alert(result.error)
+return
+}
 
 alert("Configuração salva")
 
