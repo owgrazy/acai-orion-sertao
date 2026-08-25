@@ -19,6 +19,7 @@ import {
 import { isStoreOpen } from "@/lib/store";
 import { makeId } from "@/lib/id";
 import { ui } from "@/lib/ui";
+import { createOrderAction } from "./actions";
 
 type DeliveryArea = {
   id: string;
@@ -58,25 +59,15 @@ export default function CartPage() {
 
   useEffect(() => {
     setItems(getCart());
-    loadProfilePrefill();
+    void (async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle();
+      if (profile?.full_name) setName(profile.full_name);
+      if (profile?.phone) setPhone(profile.phone);
+    })();
   }, []);
-
-  async function loadProfilePrefill() {
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, phone")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const p = profile as { full_name?: string | null; phone?: string | null } | null;
-
-    if (p?.full_name && !name) setName(p.full_name);
-    if (p?.phone && !phone) setPhone(p.phone);
-  }
 
   async function loadAreas() {
     setAreasLoading(true);
@@ -100,7 +91,7 @@ export default function CartPage() {
     setAreas(
       list.map((x) => ({
         ...x,
-        fee: typeof x.fee === "number" ? x.fee : Number((x as any).fee || 0),
+        fee: Number(x.fee || 0),
       }))
     );
   }
@@ -223,52 +214,47 @@ export default function CartPage() {
     setSending(true);
 
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-
       const bairroName = fulfillment === "delivery" ? selectedArea?.name || "" : "";
       const addr = fulfillment === "delivery" ? address.trim() : "";
 
       const payload = {
-        user_id: user?.id || null,
-        customer_name: name.trim(),
-        customer_phone: phoneDigits,
+        customerName: name.trim(),
+        customerPhone: phoneDigits,
         fulfillment,
-        bairro_name: fulfillment === "delivery" ? bairroName : null,
-        delivery_fee: deliveryFee,
+        deliveryAreaId: fulfillment === "delivery" ? areaId : null,
         address: fulfillment === "delivery" ? addr : null,
         payment,
-        change_for: payment === "Dinheiro" ? (changeFor.trim() || null) : null,
-        items_total: itemsTotal,
-        total_final: grandTotal,
-        items: items,
-        status: "novo",
+        changeFor: payment === "Dinheiro" ? (changeFor.trim() || null) : null,
+        items: items.map((item) => ({
+          mode: item.mode,
+          sizeId: item.sizeId || null,
+          acaiTypeId: item.acaiTypeId || null,
+          sorveteIds: item.sorveteIds || [],
+          extrasIds: item.extrasIds || [],
+          readyProductId: item.milkshakeFlavorId || null,
+        })),
       };
 
-      const { data, error } = await supabase
-        .from("orders")
-        .insert(payload)
-        .select("id, tracking_code, order_code")
-        .single();
-
-      if (error) {
-        alert(`Erro ao salvar pedido: ${error.message}`);
+      const result = await createOrderAction(payload);
+      if (!result.ok) {
+        alert(`Erro ao salvar pedido: ${result.error}`);
         return;
       }
 
-      const orderId = data?.id || "";
-      const trackingCode = data?.tracking_code || "";
-      const orderCode = data?.order_code || orderId;
+      const authoritativeItems = result.order.items as CartItem[];
+      const orderId = result.order.id;
+      const trackingCode = result.order.tracking_code;
+      const orderCode = result.order.order_code || orderId;
 
       const trackingLink = `${window.location.origin}/order/${orderId}?code=${trackingCode}`;
 
       const text = buildWhatsAppText({
-        items,
+        items: authoritativeItems,
         customerName: name.trim(),
         customerPhone: phoneDigits,
         fulfillment,
         bairro: bairroName,
-        deliveryFee,
+        deliveryFee: result.order.delivery_fee,
         address: addr,
         payment,
         changeFor: payment === "Dinheiro" ? changeFor : undefined,
@@ -279,8 +265,8 @@ export default function CartPage() {
       const url = `https://wa.me/${waNum}?text=${encodeURIComponent(text)}`;
       window.location.href = url;
       return;
-    } catch (e: any) {
-      alert(`Erro ao enviar pedido: ${e?.message || "erro desconhecido"}`);
+    } catch (error: unknown) {
+      alert(`Erro ao enviar pedido: ${error instanceof Error ? error.message : "erro desconhecido"}`);
     } finally {
       setSending(false);
     }
@@ -425,7 +411,7 @@ export default function CartPage() {
 
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#f2eaff" }}>
               Forma de pagamento
-              <select value={payment} onChange={(e) => setPayment(e.target.value as any)} style={ui.input}>
+              <select value={payment} onChange={(e) => setPayment(e.target.value as "Pix" | "Cartão" | "Dinheiro")} style={ui.input}>
                 <option value="Pix">Pix</option>
                 <option value="Cartão">Cartão</option>
                 <option value="Dinheiro">Dinheiro</option>

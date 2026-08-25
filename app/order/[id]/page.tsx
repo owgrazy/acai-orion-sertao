@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { supabase } from "@/lib/supabaseClient";
@@ -33,7 +33,6 @@ type OrderRow = {
   order_code: string | null;
   created_at: string;
   customer_name: string;
-  customer_phone: string;
   fulfillment: "delivery" | "pickup";
   bairro_name: string | null;
   delivery_fee: number;
@@ -46,6 +45,7 @@ type OrderRow = {
   status_updated_at: string;
   tracking_code: string;
   items: OrderItem[];
+  details_unlocked: boolean;
 };
 
 function fmtDateTimeBR(iso: string) {
@@ -149,21 +149,15 @@ export default function OrderTrackingPage() {
   const id = params?.id;
   const code = searchParams.get("code") || "";
 
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(Boolean(id && code));
+  const [err, setErr] = useState(id && code ? "" : "Link inválido.");
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [phoneCheck, setPhoneCheck] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
 
-  const last4 = useMemo(() => {
-    return order?.customer_phone ? normalizePhoneBR(order.customer_phone).slice(-4) : "";
-  }, [order?.customer_phone]);
-
   useEffect(() => {
     if (!id || !code) {
-      setLoading(false);
-      setErr("Link inválido.");
       return;
     }
 
@@ -178,6 +172,7 @@ export default function OrderTrackingPage() {
       const { data, error } = await supabase.rpc("get_order_by_code", {
         p_id: id,
         p_code: code,
+        p_phone_last4: null,
       });
 
       if (cancelled) return;
@@ -217,13 +212,30 @@ export default function OrderTrackingPage() {
     };
   }, [id, code]);
 
-  function tryUnlock() {
+  async function tryUnlock() {
     const digits = normalizePhoneBR(phoneCheck);
-    if (digits.slice(-4) === last4) {
-      setUnlocked(true);
-    } else {
+    if (digits.length < 4 || !id || !code) {
       alert("Últimos 4 dígitos do telefone não conferem.");
+      return;
     }
+
+    const { data, error } = await supabase.rpc("get_order_by_code", {
+      p_id: id,
+      p_code: code,
+      p_phone_last4: digits.slice(-4),
+    });
+    const first = data?.[0];
+    if (error || !first?.details_unlocked) {
+      alert("Últimos 4 dígitos do telefone não conferem.");
+      return;
+    }
+    setOrder({
+      ...first,
+      delivery_fee: Number(first.delivery_fee || 0),
+      items_total: Number(first.items_total || 0),
+      total_final: Number(first.total_final || 0),
+    });
+    setUnlocked(true);
   }
 
   const waNum = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
