@@ -68,16 +68,16 @@ test("tracking público retorna progresso sem PII para códigos históricos e no
   const start = sql.indexOf("create function public.get_order_by_code");
   const end = sql.indexOf("$$;", start);
   const trackingFunction = sql.slice(start, end);
-  const returnedColumns = trackingFunction.slice(
-    trackingFunction.indexOf("returns table ("),
-    trackingFunction.indexOf(")\nlanguage sql")
-  );
+  const returnedColumns = trackingFunction.match(/returns table \(([\s\S]*?)\)\s*language sql/i)?.[1] ?? "";
+  const selectedColumns = trackingFunction.match(/select ([\s\S]*?)\s+from public\.orders/i)?.[1] ?? "";
 
   assert.match(trackingFunction, /p_id uuid, p_code text\)/);
   assert.match(trackingFunction, /id uuid, order_code text, created_at timestamptz, fulfillment text,[\s\S]*status text, status_updated_at timestamptz/);
+  assert.match(trackingFunction, /o\.tracking_code = p_code/);
   assert.match(trackingFunction, /length\(p_code\) between 6 and 128/);
   for (const pii of ["customer_phone", "customer_name", "address", "user_id", "tracking_code", "payment", "change_for", "items jsonb"]) {
     assert.doesNotMatch(returnedColumns, new RegExp(pii), `tracking não pode retornar ${pii}`);
+    assert.doesNotMatch(selectedColumns, new RegExp(pii), `tracking não pode selecionar ${pii}`);
   }
 
   const page = await readFile("app/order/[id]/page.tsx", "utf8");
