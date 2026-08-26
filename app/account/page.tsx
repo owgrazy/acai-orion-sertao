@@ -15,10 +15,6 @@ export default function AccountPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
   async function loadProfile() {
     setLoading(true);
     setErr("");
@@ -52,6 +48,11 @@ export default function AccountPage() {
     setPhone(data?.phone || "");
   }
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadProfile(), 0);
+    return () => window.clearTimeout(timer);
+  }, []); // Profile is loaded once when the account screen mounts.
+
   async function saveProfile() {
     setSaving(true);
     setErr("");
@@ -66,13 +67,22 @@ export default function AccountPage() {
       return;
     }
 
-    const payload = {
-      id: user.id,
+    const profileFields = {
       full_name: fullName.trim() || null,
       phone: phone.trim() || null,
     };
 
-    const { error } = await supabase.from("profiles").upsert(payload);
+    const { data: existing, error: lookupError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const { error } = lookupError
+      ? { error: lookupError }
+      : existing
+        ? await supabase.from("profiles").update(profileFields).eq("id", user.id)
+        : await supabase.from("profiles").insert({ id: user.id, ...profileFields });
 
     setSaving(false);
 

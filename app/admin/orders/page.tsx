@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { supabase } from "@/lib/supabaseClient";
 import { money } from "@/lib/cart";
 import { ui } from "@/lib/ui";
+import { updateOrderStatusAction } from "../actions";
 
 type OrderItem = {
   id: string;
@@ -423,15 +424,12 @@ export default function AdminOrdersPage() {
   async function updateStatus(orderId: string, newStatus: string) {
     setSavingId(orderId);
 
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: newStatus })
-      .eq("id", orderId);
+    const result = await updateOrderStatusAction(orderId, newStatus);
 
     setSavingId("");
 
-    if (error) {
-      alert(`Erro ao salvar status: ${error.message}`);
+    if (!result.ok) {
+      alert(result.error);
       return;
     }
 
