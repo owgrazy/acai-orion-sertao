@@ -54,7 +54,7 @@ create policy profiles_select_own on public.profiles for select to authenticated
 create policy profiles_insert_own on public.profiles for insert to authenticated
   with check (id = (select auth.uid()) and role = 'client');
 create policy profiles_update_own on public.profiles for update to authenticated
-  using (id = (select auth.uid())) with check (id = (select auth.uid()) and role = 'client');
+  using (id = (select auth.uid())) with check (id = (select auth.uid()));
 revoke all on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
 grant insert (id, full_name, phone) on public.profiles to authenticated;
@@ -66,6 +66,7 @@ drop policy if exists products_admin_all on public.products;
 drop policy if exists products_admin_write on public.products;
 drop policy if exists products_read_all on public.products;
 drop policy if exists products_select_available on public.products;
+drop policy if exists products_public_read_available on public.products;
 create policy products_public_read_available on public.products for select to anon, authenticated
   using (is_available = true);
 create policy products_admin_all on public.products for all to authenticated
@@ -77,6 +78,8 @@ grant insert, update, delete on public.products to authenticated;
 alter table public.delivery_areas enable row level security;
 drop policy if exists delivery_areas_admin_write on public.delivery_areas;
 drop policy if exists delivery_areas_read_all on public.delivery_areas;
+drop policy if exists delivery_areas_public_read_active on public.delivery_areas;
+drop policy if exists delivery_areas_admin_all on public.delivery_areas;
 create policy delivery_areas_public_read_active on public.delivery_areas for select to anon, authenticated
   using (is_active = true);
 create policy delivery_areas_admin_all on public.delivery_areas for all to authenticated
@@ -137,7 +140,7 @@ begin
     raise exception 'invalid customer' using errcode = '22023';
   end if;
 
-  select * into v_store from public.store_settings order by id limit 1;
+  select * into v_store from public.store_settings s order by s.id limit 1;
   if found and (
     v_store.force_closed = true
     or (pg_catalog.timezone('America/Sao_Paulo', pg_catalog.now()))::time
@@ -147,8 +150,8 @@ begin
   end if;
 
   if v_fulfillment = 'delivery' then
-    select * into v_area from public.delivery_areas
-      where id = (p_order->>'delivery_area_id')::uuid and is_active = true;
+    select * into v_area from public.delivery_areas a
+      where a.id = (p_order->>'delivery_area_id')::uuid and a.is_active = true;
     if not found or nullif(trim(p_order->>'address'), '') is null or length(p_order->>'address') > 500 then
       raise exception 'invalid delivery' using errcode = '22023';
     end if;
@@ -160,9 +163,9 @@ begin
   for v_item in select value from jsonb_array_elements(p_order->'items') loop
     v_item_total := 0;
     if v_item->>'mode' = 'milkshake' then
-      select * into v_product from public.products
-        where id = (v_item->>'ready_product_id')::uuid
-          and type in ('milkshake', 'bebida', 'outro', 'combo') and is_available = true and price is not null;
+      select * into v_product from public.products p
+        where p.id = (v_item->>'ready_product_id')::uuid
+          and p.type in ('milkshake', 'bebida', 'outro', 'combo') and p.is_available = true and p.price is not null;
       if not found then raise exception 'invalid product' using errcode = '22023'; end if;
       v_item_total := v_product.price;
       v_snapshot := v_snapshot || jsonb_build_array(jsonb_build_object(
@@ -172,12 +175,12 @@ begin
         'price', v_product.price, 'createdAt', floor(extract(epoch from pg_catalog.clock_timestamp()) * 1000)
       ));
     elsif v_item->>'mode' in ('acai', 'sorvete', 'mix') then
-      select * into v_size from public.products
-        where id = (v_item->>'size_id')::uuid and type = 'size' and is_available = true and price is not null;
+      select * into v_size from public.products p
+        where p.id = (v_item->>'size_id')::uuid and p.type = 'size' and p.is_available = true and p.price is not null;
       if not found then raise exception 'invalid size' using errcode = '22023'; end if;
       if v_item->>'mode' in ('acai', 'mix') then
-        select * into v_acai from public.products
-          where id = (v_item->>'acai_type_id')::uuid and type = 'acai_type' and is_available = true;
+        select * into v_acai from public.products p
+          where p.id = (v_item->>'acai_type_id')::uuid and p.type = 'acai_type' and p.is_available = true;
         if not found then raise exception 'invalid acai' using errcode = '22023'; end if;
       else v_acai := null; end if;
 
@@ -246,6 +249,9 @@ drop policy if exists orders_delete_none on public.orders;
 drop policy if exists orders_select_admin_only on public.orders;
 drop policy if exists orders_select_own_user on public.orders;
 drop policy if exists orders_update_admin_only on public.orders;
+drop policy if exists orders_select_own on public.orders;
+drop policy if exists orders_select_admin on public.orders;
+drop policy if exists orders_update_admin on public.orders;
 create policy orders_select_own on public.orders for select to authenticated using (user_id = (select auth.uid()));
 create policy orders_select_admin on public.orders for select to authenticated using ((select public.is_admin()));
 create policy orders_update_admin on public.orders for update to authenticated
@@ -259,14 +265,14 @@ alter table public.orders add constraint orders_status_valid check (
   status in ('novo','confirmado','preparando','pronto','saiu_para_entrega','entregue','cancelado')
 ) not valid;
 
--- Public tracking reveals summary first and details only after server-side phone verification.
+-- Public tracking returns only non-sensitive progress data. Possession of the
+-- unguessable tracking link never grants access to customer or order PII.
 drop function if exists public.get_order_by_code(uuid, text);
-create function public.get_order_by_code(p_id uuid, p_code text, p_phone_last4 text default null)
+drop function if exists public.get_order_by_code(uuid, text, text);
+create function public.get_order_by_code(p_id uuid, p_code text)
 returns table (
-  id uuid, order_code text, created_at timestamptz, fulfillment text, bairro_name text,
-  delivery_fee numeric, payment text, items_total numeric, total_final numeric, status text,
-  status_updated_at timestamptz, customer_name text, address text, change_for text, items jsonb,
-  details_unlocked boolean
+  id uuid, order_code text, created_at timestamptz, fulfillment text,
+  status text, status_updated_at timestamptz
 )
 language sql
 stable
@@ -274,30 +280,24 @@ security definer
 set search_path = ''
 as $$
   select o.id, o.order_code::text, o.created_at, o.fulfillment::text,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.bairro_name else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.delivery_fee else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.payment::text else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.items_total else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.total_final else null end,
-    o.status, o.status_updated_at,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.customer_name else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.address else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.change_for else null end,
-    case when right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4 then o.items else null end,
-    right(regexp_replace(o.customer_phone, '\D', '', 'g'), 4) = p_phone_last4
+    o.status, o.status_updated_at
   from public.orders o
   where o.id = p_id and o.tracking_code = p_code
     and length(p_code) between 6 and 128
   limit 1;
 $$;
-revoke all on function public.get_order_by_code(uuid, text, text) from public;
-grant execute on function public.get_order_by_code(uuid, text, text) to anon, authenticated;
+revoke all on function public.get_order_by_code(uuid, text) from public;
+grant execute on function public.get_order_by_code(uuid, text) to anon, authenticated;
 
 -- Public images, admin-only writes, plus bucket-level validation.
 drop policy if exists "Public read product images" on storage.objects;
 drop policy if exists "Auth upload product images" on storage.objects;
 drop policy if exists "Auth update product images" on storage.objects;
 drop policy if exists "Auth delete product images" on storage.objects;
+drop policy if exists product_images_public_read on storage.objects;
+drop policy if exists product_images_admin_insert on storage.objects;
+drop policy if exists product_images_admin_update on storage.objects;
+drop policy if exists product_images_admin_delete on storage.objects;
 create policy product_images_public_read on storage.objects for select to public using (bucket_id = 'product-images');
 create policy product_images_admin_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'product-images' and (select public.is_admin()));

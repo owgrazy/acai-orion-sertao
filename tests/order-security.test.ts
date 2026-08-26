@@ -63,6 +63,28 @@ test("migration fecha RLS e mantém criação/rastreamento por RPC restrita", as
   assert.doesNotMatch(sql, /returns setof orders/i);
 });
 
+test("tracking público retorna progresso sem PII para códigos históricos e novos", async () => {
+  const sql = await readFile("supabase/migrations/20260825000000_secure_rls_and_orders.sql", "utf8");
+  const start = sql.indexOf("create function public.get_order_by_code");
+  const end = sql.indexOf("$$;", start);
+  const trackingFunction = sql.slice(start, end);
+  const returnedColumns = trackingFunction.slice(
+    trackingFunction.indexOf("returns table ("),
+    trackingFunction.indexOf(")\nlanguage sql")
+  );
+
+  assert.match(trackingFunction, /p_id uuid, p_code text\)/);
+  assert.match(trackingFunction, /id uuid, order_code text, created_at timestamptz, fulfillment text,[\s\S]*status text, status_updated_at timestamptz/);
+  assert.match(trackingFunction, /length\(p_code\) between 6 and 128/);
+  for (const pii of ["customer_phone", "customer_name", "address", "user_id", "tracking_code", "payment", "change_for", "items jsonb"]) {
+    assert.doesNotMatch(returnedColumns, new RegExp(pii), `tracking não pode retornar ${pii}`);
+  }
+
+  const page = await readFile("app/order/[id]/page.tsx", "utf8");
+  assert.doesNotMatch(page, /phone|address|payment|change_for|items_total|total_final|details_unlocked/i);
+  assert.match(page, /p_id: id, p_code: code/);
+});
+
 test("migration bloqueia autoelevação e escrita administrativa comum", async () => {
   const sql = await readFile("supabase/migrations/20260825000000_secure_rls_and_orders.sql", "utf8");
   assert.match(sql, /grant insert \(id, full_name, phone\) on public\.profiles/);
@@ -73,3 +95,24 @@ test("migration bloqueia autoelevação e escrita administrativa comum", async (
   assert.match(sql, /alter table public\.store_settings enable row level security/);
 });
 
+test("admin edita campos comuns próprios sem obter permissão sobre role ou id", async () => {
+  const sql = await readFile("supabase/migrations/20260825000000_secure_rls_and_orders.sql", "utf8");
+  assert.match(sql, /create policy profiles_update_own[\s\S]*using \(id = \(select auth\.uid\(\)\)\) with check \(id = \(select auth\.uid\(\)\)\)/);
+  assert.match(sql, /grant update \(full_name, phone\) on public\.profiles to authenticated/);
+  assert.doesNotMatch(sql, /grant update \([^)]*(?:role|id)[^)]*\) on public\.profiles to authenticated/i);
+  assert.match(sql, /tg_op = 'INSERT'[\s\S]*new\.role[\s\S]*<> 'client'/);
+  assert.match(sql, /tg_op = 'UPDATE'[\s\S]*new\.role is distinct from old\.role/);
+  assert.match(sql, /new\.id <> \(select auth\.uid\(\)\)/);
+});
+
+test("migration remove objetos nomeados antes de recriá-los", async () => {
+  const sql = await readFile("supabase/migrations/20260825000000_secure_rls_and_orders.sql", "utf8");
+  const policyNames = [...sql.matchAll(/create policy\s+(?:"([^"]+)"|([a-z0-9_]+))/gi)].map((match) => match[1] || match[2]);
+  for (const name of policyNames) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(sql, new RegExp(`drop policy if exists (?:"${escaped}"|${escaped}) on`, "i"), `policy ${name} deve ser removida antes da criação`);
+  }
+  assert.match(sql, /drop trigger if exists protect_profile_identity_and_role[\s\S]*create trigger protect_profile_identity_and_role/);
+  assert.match(sql, /drop function if exists public\.get_order_by_code\(uuid, text\);[\s\S]*drop function if exists public\.get_order_by_code\(uuid, text, text\);[\s\S]*create function public\.get_order_by_code/);
+  assert.match(sql, /if not exists \([\s\S]*pubname = 'supabase_realtime'[\s\S]*alter publication supabase_realtime add table public\.orders/);
+});
