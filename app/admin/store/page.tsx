@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
-import AppHeader from "@/components/AppHeader"
 import { ui } from "@/lib/ui"
 import { updateStoreSettingsAction } from "../actions"
 
@@ -53,7 +52,6 @@ alert("Configuração salva")
 
 return(
 <>
-<AppHeader/>
 
 <main style={ui.appBg}>
 <section style={ui.page}>

@@ -29,8 +29,8 @@ export default function CheckPill({ checked, onChange, label }: Props) {
           width: 20,
           height: 20,
           borderRadius: 6,
-          border: checked ? "2px solid #c084fc" : "2px solid rgba(255,255,255,0.28)",
-          background: checked ? "linear-gradient(135deg, #a855f7, #7c3aed)" : "transparent",
+          border: checked ? "2px solid var(--primary)" : "2px solid var(--border-strong)",
+          background: checked ? "var(--primary)" : "transparent",
           display: "grid",
           placeItems: "center",
           flexShrink: 0,
@@ -53,7 +53,7 @@ export default function CheckPill({ checked, onChange, label }: Props) {
         </span>
       </span>
 
-      <span style={{ color: "#fff" }}>{label}</span>
+      <span style={{ color: "var(--text)" }}>{label}</span>
     </label>
   );
 }

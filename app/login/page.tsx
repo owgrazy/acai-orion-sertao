@@ -95,8 +95,9 @@ export default function LoginPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
-          <header style={{ marginBottom: 14 }}>
+        <section className="auth-page" style={ui.pageNarrow}>
+          <header className="auth-heading" style={{ marginBottom: 14 }}>
+            <span className="eyebrow">Bem-vindo</span>
             <h1 style={ui.title}>
               {mode === "login" ? "Entrar" : mode === "signup" ? "Criar conta" : "Recuperar senha"}
             </h1>
@@ -121,8 +122,8 @@ export default function LoginPage() {
             </section>
           ) : null}
 
-          <section style={ui.section}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <section className="auth-card" style={ui.section}>
+            <div className="auth-tabs" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               <button onClick={() => setMode("login")} style={tabButton(mode === "login")}>
                 Entrar
               </button>

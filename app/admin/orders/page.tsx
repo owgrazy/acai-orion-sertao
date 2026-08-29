@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AppHeader from "@/components/AppHeader";
 import { supabase } from "@/lib/supabaseClient";
 import { money } from "@/lib/cart";
 import { ui } from "@/lib/ui";
@@ -610,7 +609,6 @@ export default function AdminOrdersPage() {
 
   return (
     <>
-      <AppHeader />
 
       <main style={ui.appBg}>
         <section style={ui.page}>

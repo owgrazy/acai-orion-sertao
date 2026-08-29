@@ -389,22 +389,22 @@ export default function MenuPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={{ ...ui.pageNarrow, paddingBottom: cartCount > 0 ? 110 : 18 }}>
-          <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <h1 style={ui.title}>Monte seu pedido</h1>
-            <a href="/cart" style={{ textDecoration: "underline", fontSize: 14, color: "#e9dcff" }}>
-              Ver carrinho
+        <section className="menu-page" style={{ ...ui.pageNarrow, paddingBottom: cartCount > 0 ? 110 : 18 }}>
+          <header className="menu-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div><span className="eyebrow">Cardápio</span><h1 style={ui.title}>Monte seu pedido</h1></div>
+            <a className="cart-shortcut" href="/cart">
+              <span aria-hidden="true">◉</span> Carrinho <b>{cartCount}</b>
             </a>
           </header>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
-            <button onClick={() => setMode("acai")} style={tabButton(mode === "acai")}>Açaí</button>
-            <button onClick={() => setMode("sorvete")} style={tabButton(mode === "sorvete")}>Sorvete</button>
-            <button onClick={() => setMode("mix")} style={tabButton(mode === "mix")}>Açaí + Sorvete</button>
-            <button onClick={() => setMode("milkshake")} style={tabButton(mode === "milkshake")}>Milkshake</button>
-            <button onClick={() => setMode("bebida")} style={tabButton(mode === "bebida")}>Bebidas</button>
-            <button onClick={() => setMode("outro")} style={tabButton(mode === "outro")}>Outros</button>
-            <button onClick={() => setMode("combo")} style={tabButton(mode === "combo")}>Combos</button>
+          <div className="menu-categories" aria-label="Categorias">
+            <button className="category-pill" onClick={() => setMode("acai")} style={tabButton(mode === "acai")}>Açaí</button>
+            <button className="category-pill" onClick={() => setMode("sorvete")} style={tabButton(mode === "sorvete")}>Sorvete</button>
+            <button className="category-pill" onClick={() => setMode("mix")} style={tabButton(mode === "mix")}>Açaí + Sorvete</button>
+            <button className="category-pill" onClick={() => setMode("milkshake")} style={tabButton(mode === "milkshake")}>Milkshake</button>
+            <button className="category-pill" onClick={() => setMode("bebida")} style={tabButton(mode === "bebida")}>Bebidas</button>
+            <button className="category-pill" onClick={() => setMode("outro")} style={tabButton(mode === "outro")}>Outros</button>
+            <button className="category-pill" onClick={() => setMode("combo")} style={tabButton(mode === "combo")}>Combos</button>
           </div>
 
           {mode !== "milkshake" &&
@@ -762,7 +762,7 @@ function ReadyProductsQuantitySection({
   footerText?: string;
 }) {
   return (
-    <section style={ui.section}>
+    <section className="menu-step product-list" style={ui.section}>
       <b style={{ color: "#fff" }}>{title}</b>
 
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
@@ -811,7 +811,7 @@ function ChoiceCard({
   name?: string;
 }) {
   return (
-    <div
+    <div className="option-card"
       style={{
         display: "flex",
         gap: 10,
@@ -885,7 +885,7 @@ function QuantityCard({
   onPreview?: () => void;
 }) {
   return (
-    <div
+    <div className="option-card option-card--quantity"
       style={{
         display: "flex",
         gap: 10,
@@ -962,7 +962,7 @@ function ExtrasGroup({
 
       <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
         {items.map((e) => (
-          <div
+          <div className="extra-card"
             key={e.id}
             style={{
               display: "flex",

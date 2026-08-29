@@ -277,11 +277,11 @@ export default function CartPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
-          <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <h1 style={ui.title}>Carrinho</h1>
-            <a href="/menu" style={{ textDecoration: "underline", fontSize: 14, color: "#e9dcff" }}>
-              Voltar ao menu
+        <section className="checkout-page" style={ui.pageNarrow}>
+          <header className="checkout-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div><span className="eyebrow">Seu pedido</span><h1 style={ui.title}>Carrinho</h1></div>
+            <a className="btn btn--ghost" href="/menu">
+              Continuar comprando
             </a>
           </header>
 
@@ -292,7 +292,7 @@ export default function CartPage() {
           ) : (
             <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
               {groupedItems.map((group, idx) => (
-                <div key={group.key} style={ui.card}>
+                <div className="cart-item-card" key={group.key} style={ui.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "start", flexWrap: "wrap" }}>
                     <div>
                       <b style={{ color: "#fff" }}>
@@ -323,7 +323,7 @@ export default function CartPage() {
             </div>
           )}
 
-          <section style={ui.section}>
+          <section className="checkout-section" style={ui.section}>
             <b style={{ color: "#fff" }}>Como você quer receber?</b>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
@@ -350,7 +350,7 @@ export default function CartPage() {
           </section>
 
           {fulfillment === "delivery" ? (
-            <section style={ui.section}>
+            <section className="checkout-section" style={ui.section}>
               <b style={{ color: "#fff" }}>Entrega</b>
 
               {areasErr ? <p style={{ color: "#ff9d9d", marginTop: 10 }}>Erro bairros: {areasErr}</p> : null}
@@ -383,7 +383,7 @@ export default function CartPage() {
             </section>
           ) : null}
 
-          <section style={ui.section}>
+          <section className="checkout-section" style={ui.section}>
             <b style={{ color: "#fff" }}>Seus dados</b>
 
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#f2eaff" }}>
@@ -406,7 +406,7 @@ export default function CartPage() {
             </div>
           </section>
 
-          <section style={ui.section}>
+          <section className="checkout-section" style={ui.section}>
             <b style={{ color: "#fff" }}>Pagamento</b>
 
             <label style={{ display: "grid", gap: 6, marginTop: 12, color: "#f2eaff" }}>
@@ -426,7 +426,7 @@ export default function CartPage() {
             ) : null}
           </section>
 
-          <section style={ui.section}>
+          <section className="checkout-section checkout-summary" style={ui.section}>
             <b style={{ color: "#fff" }}>Resumo</b>
 
             <div style={{ marginTop: 10, lineHeight: 1.7, color: "#ece1ff" }}>
@@ -436,7 +436,7 @@ export default function CartPage() {
             </div>
           </section>
 
-          <div style={{ display: "grid", gap: 10, marginTop: 16, paddingBottom: 24 }}>
+          <div className="checkout-actions" style={{ display: "grid", gap: 10, marginTop: 16, paddingBottom: 24 }}>
             <button
               onClick={saveOrderAndSendWhatsApp}
               disabled={!isValid || sending}

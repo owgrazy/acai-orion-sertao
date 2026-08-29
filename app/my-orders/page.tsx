@@ -140,7 +140,7 @@ export default function MyOrdersPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
+        <section className="orders-page" style={ui.pageNarrow}>
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <h1 style={ui.title}>Meus pedidos</h1>
             <a href="/menu" style={{ textDecoration: "underline", fontSize: 14, color: "#e9dcff" }}>

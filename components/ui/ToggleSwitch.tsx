@@ -23,9 +23,9 @@ export default function ToggleSwitch({
         gap: 10,
         padding: "8px 10px",
         borderRadius: 999,
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(255,255,255,0.04)",
-        color: "#fff",
+        border: "1px solid var(--border)",
+        background: "var(--surface-soft)",
+        color: "var(--text)",
         cursor: "pointer",
       }}
     >
@@ -34,7 +34,7 @@ export default function ToggleSwitch({
           width: 42,
           height: 24,
           borderRadius: 999,
-          background: checked ? "linear-gradient(135deg, #a855f7, #7c3aed)" : "rgba(255,255,255,0.16)",
+          background: checked ? "var(--primary)" : "var(--border-strong)",
           position: "relative",
           transition: "0.18s ease",
         }}

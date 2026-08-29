@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AppHeader from "@/components/AppHeader";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { supabase } from "@/lib/supabaseClient";
 import { ui } from "@/lib/ui";
@@ -214,7 +213,6 @@ export default function AdminProductsPage() {
 
   return (
     <>
-      <AppHeader />
 
       <main style={ui.appBg}>
         <section style={ui.page}>

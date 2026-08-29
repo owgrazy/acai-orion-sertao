@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AppHeader from "@/components/AppHeader";
 import { supabase } from "@/lib/supabaseClient";
 import { ui } from "@/lib/ui";
 
@@ -44,7 +43,6 @@ export default function AdminHome() {
   if (loading) {
     return (
       <>
-        <AppHeader />
         <main style={ui.appBg}>
           <section style={ui.pageNarrow}>
             <section style={ui.section}>
@@ -59,7 +57,6 @@ export default function AdminHome() {
   if (!isAdmin) {
     return (
       <>
-        <AppHeader />
         <main style={ui.appBg}>
           <section style={ui.pageNarrow}>
             <section style={ui.section}>
@@ -77,10 +74,9 @@ export default function AdminHome() {
 
   return (
     <>
-      <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.page}>
+        <section className="admin-dashboard" style={ui.page}>
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <h1 style={ui.title}>Painel Admin</h1>
             <a href="/menu" style={{ color: "#e9dcff", textDecoration: "underline", fontSize: 14 }}>
@@ -90,7 +86,7 @@ export default function AdminHome() {
 
           {err ? <p style={{ color: "#ff9d9d", marginTop: 10 }}>Erro: {err}</p> : null}
 
-          <div style={{ display: "grid", gap: 14, marginTop: 18 }}>
+          <div className="admin-dashboard-grid" style={{ display: "grid", gap: 14, marginTop: 18 }}>
             <a href="/admin/orders" style={{ ...ui.card, textDecoration: "none" }}>
               <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>Pedidos</div>
               <div style={{ color: "#ddd0f6", marginTop: 6 }}>Ver pedidos, status, faturamento e exportação CSV.</div>

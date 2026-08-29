@@ -99,7 +99,7 @@ export default function AccountPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
+        <section className="profile-page" style={ui.pageNarrow}>
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h1 style={ui.title}>Minha conta</h1>
             <a href="/menu" style={{ textDecoration: "underline", fontSize: 14, color: "#e9dcff" }}>

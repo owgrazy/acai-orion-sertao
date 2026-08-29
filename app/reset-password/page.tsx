@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
       <AppHeader />
 
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
+        <section className="auth-page" style={ui.pageNarrow}>
           <h1 style={ui.title}>Redefinir senha</h1>
 
           {err ? (

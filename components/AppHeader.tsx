@@ -1,271 +1,109 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import ThemeToggle from "@/components/ThemeToggle";
 
-type ProfileData = {
-  full_name: string | null;
-  phone: string | null;
-  role: string | null;
-};
+type ProfileData = { full_name: string | null; phone: string | null; role: string | null };
 
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-
   const [isLogged, setIsLogged] = useState(false);
   const [userName, setUserName] = useState("");
   const [role, setRole] = useState<string | null>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    loadUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function loadUser() {
+  const loadUser = useCallback(async () => {
     setLoading(true);
-
     const { data } = await supabase.auth.getUser();
     const user = data?.user;
-
-    if (!user) {
-      setIsLogged(false);
-      setUserName("");
-      setRole(null);
-      setLoading(false);
-      return;
-    }
-
+    if (!user) { setIsLogged(false); setUserName(""); setRole(null); setLoading(false); return; }
     setIsLogged(true);
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, phone, role")
-      .eq("id", user.id)
-      .maybeSingle();
-
+    const { data: profile } = await supabase.from("profiles").select("full_name, phone, role").eq("id", user.id).maybeSingle();
     const p = profile as ProfileData | null;
-
-    const fallbackName =
-      (user.user_metadata?.full_name as string) ||
-      (user.user_metadata?.name as string) ||
-      "Cliente";
-
-    setUserName(p?.full_name || fallbackName);
+    setUserName(p?.full_name || (user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || "Cliente");
     setRole(p?.role || null);
     setLoading(false);
-  }
+  }, []);
 
-  async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = "/menu";
-  }
+  useEffect(() => {
+    queueMicrotask(() => void loadUser());
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => void loadUser());
+    return () => subscription.unsubscribe();
+  }, [loadUser]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    document.body.classList.add("drawer-open");
+    const previous = document.activeElement as HTMLElement | null;
+    const trigger = triggerRef.current;
+    drawerRef.current?.querySelector<HTMLElement>("a,button")?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key !== "Tab" || !drawerRef.current) return;
+      const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>("a,button:not([disabled])"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.classList.remove("drawer-open");
+      document.removeEventListener("keydown", onKeyDown);
+      (previous ?? trigger)?.focus();
+    };
+  }, [menuOpen]);
+
+  async function logout() { await supabase.auth.signOut(); window.location.href = "/menu"; }
 
   return (
     <>
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 2000,
-          background:
-            "linear-gradient(135deg, rgba(28,12,45,0.98), rgba(76,29,149,0.95))",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 920,
-            margin: "0 auto",
-            padding: "12px 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <a
-  href="/"
-  style={{
-    textDecoration: "none",
-    color: "#ffffff",
-    fontWeight: 900,
-    fontSize: 18,
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  }}
->
-  <img
-    src="/logo-orion-white.png"
-    alt="Açaí Órion"
-    style={{
-      width: 38,
-      height: 38,
-      objectFit: "contain",
-      display: "block",
-    }}
-  />
-  <span style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>
-    Açaí Órion Sertão
-  </span>
-</a>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {!loading ? (
-              isLogged ? (
-                <span style={{ fontSize: 13, color: "#f3ebff" }}>
-                  Olá, <b>{userName}</b>
-                </span>
-              ) : (
-                <a href="/login" style={{ textDecoration: "underline", fontSize: 13, color: "#fff" }}>
-                  Entrar
-                </a>
-              )
-            ) : null}
-
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Abrir menu"
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.06)",
-                cursor: "pointer",
-                display: "grid",
-                placeItems: "center",
-                padding: 0,
-              }}
-            >
-              <div style={{ display: "grid", gap: 4 }}>
-                <span style={barStyle} />
-                <span style={barStyle} />
-                <span style={barStyle} />
-              </div>
+      <header className="app-header">
+        <div className="app-header__inner">
+          <Link className="brand" href="/" aria-label="Açaí Órion Sertão — início">
+            <Image className="brand__logo" src="/logo-orion-white.png" alt="" width={40} height={40} priority />
+            <span className="brand__text">Açaí Órion Sertão</span>
+          </Link>
+          <div className="header-actions">
+            {!loading && (isLogged ? <a className="header-account" href="/account">Olá, {userName}</a> : <a className="header-account" href="/login">Entrar</a>)}
+            <ThemeToggle />
+            <button ref={triggerRef} className="icon-button" onClick={() => setMenuOpen(true)} aria-label="Abrir menu" aria-expanded={menuOpen} aria-controls="main-drawer">
+              <span aria-hidden="true" style={{ fontSize: 22 }}>☰</span>
             </button>
           </div>
         </div>
       </header>
 
-      {menuOpen ? (
-        <div
-          onClick={() => setMenuOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.3)",
-            zIndex: 1999,
-          }}
-        >
-          <aside
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "absolute",
-              right: 12,
-              top: 64,
-              width: 290,
-              background:
-                "linear-gradient(135deg, rgba(35,16,56,0.98), rgba(85,34,136,0.96))",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 20,
-              boxShadow: "0 18px 40px rgba(0,0,0,0.32)",
-              padding: 14,
-            }}
-          >
-            <div style={{ fontWeight: 800, color: "#fff", marginBottom: 10 }}>
-              Navegação
+      {menuOpen && (
+        <>
+          <button className="drawer-overlay" onClick={() => setMenuOpen(false)} aria-label="Fechar menu" tabIndex={-1} />
+          <aside id="main-drawer" ref={drawerRef} className="drawer" role="dialog" aria-modal="true" aria-label="Navegação principal">
+            <div className="drawer__header">
+              <div><strong style={{ display: "block" }}>Menu</strong><span className="muted" style={{ fontSize: 13 }}>{isLogged ? `Olá, ${userName}` : "Peça do seu jeito"}</span></div>
+              <button className="icon-button" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">×</button>
             </div>
-
-            <nav style={{ display: "grid", gap: 8 }}>
-              <MenuLink href="/">Página inicial</MenuLink>
-              <MenuLink href="/menu">Cardápio</MenuLink>
-              <MenuLink href="/cart">Carrinho</MenuLink>
-
-              {isLogged ? (
-                <>
-                  <MenuLink href="/my-orders">Meus pedidos</MenuLink>
-                  <MenuLink href="/account">Minha conta</MenuLink>
-                </>
-              ) : null}
-
-              {role === "admin" ? (
-                <>
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "8px 0" }} />
-                  <MenuLink href="/admin">Painel admin</MenuLink>
-                  <MenuLink href="/admin/orders">Pedidos</MenuLink>
-                  <MenuLink href="/admin/products">Produtos</MenuLink>
-                  <MenuLink href="/admin/delivery-areas">Áreas de delivery</MenuLink>
-                </>
-              ) : null}
-
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "8px 0" }} />
-
-              {!isLogged ? (
-                <MenuLink href="/login">Entrar / Cadastro</MenuLink>
-              ) : (
-                <button
-                  onClick={logout}
-                  style={{
-                    textAlign: "left",
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    background: "rgba(255,255,255,0.04)",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontSize: 14,
-                  }}
-                >
-                  Sair
-                </button>
-              )}
+            <nav className="drawer__nav" onClick={() => setMenuOpen(false)}>
+              <MenuLink href="/" icon="⌂">Início</MenuLink>
+              <MenuLink href="/menu" icon="◫">Cardápio</MenuLink>
+              <MenuLink href="/cart" icon="◉">Carrinho</MenuLink>
+              {isLogged && <><MenuLink href="/my-orders" icon="◷">Meus pedidos</MenuLink><MenuLink href="/account" icon="○">Minha conta</MenuLink></>}
+              {role === "admin" && <><div className="drawer__divider" /><MenuLink href="/admin" icon="◇">Painel admin</MenuLink><MenuLink href="/admin/orders" icon="▤">Pedidos</MenuLink><MenuLink href="/admin/products" icon="□">Produtos</MenuLink><MenuLink href="/admin/delivery-areas" icon="⌖">Áreas de delivery</MenuLink><MenuLink href="/admin/store" icon="◴">Loja</MenuLink></>}
+              <div className="drawer__divider" />
+              {!isLogged ? <MenuLink href="/login" icon="→">Entrar / Cadastrar</MenuLink> : <button onClick={logout} className="drawer__link" style={{ border: 0, background: "transparent", cursor: "pointer" }}><span aria-hidden="true">↪</span>Sair</button>}
             </nav>
           </aside>
-        </div>
-      ) : null}
+        </>
+      )}
     </>
   );
 }
 
-function MenuLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      style={{
-        textDecoration: "none",
-        color: "#ffffff",
-        padding: "10px 12px",
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(255,255,255,0.04)",
-        fontSize: 14,
-      }}
-    >
-      {children}
-    </a>
-  );
+function MenuLink({ href, icon, children }: { href: string; icon: string; children: React.ReactNode }) {
+  return <Link href={href} className="drawer__link"><span aria-hidden="true">{icon}</span><span>{children}</span></Link>;
 }
-
-const barStyle: React.CSSProperties = {
-  display: "block",
-  width: 18,
-  height: 2,
-  background: "#ffffff",
-  borderRadius: 999,
-};

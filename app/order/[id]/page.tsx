@@ -77,7 +77,7 @@ export default function OrderTrackingPage() {
     <>
       <AppHeader />
       <main style={ui.appBg}>
-        <section style={ui.pageNarrow}>
+        <section className="tracking-page" style={ui.pageNarrow}>
           <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <h1 style={ui.title}>Acompanhar pedido</h1>
             <button onClick={() => router.push("/menu")} style={ui.buttonSecondary}>Menu</button>
