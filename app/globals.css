@@ -24,4 +24,5 @@
 main h1,main h2,main h3{color:var(--text)!important}main label{color:var(--text)!important}
 @media(max-width:640px){.admin-dashboard-grid{grid-template-columns:1fr}.profile-page,.orders-page,.tracking-page{padding-inline:12px!important}}
 .theme-toggle span{font-size:19px}.theme-toggle__light{display:none}:root[data-theme="dark"] .theme-toggle__light{display:inline}:root[data-theme="dark"] .theme-toggle__dark{display:none}
+.option-card>div:first-child,.extra-card>div:first-child{color:var(--text)!important}.option-card div[style*="font-size: 13"],.extra-card div[style*="font-size: 13"]{color:var(--text-secondary)!important}.admin-dashboard-grid a div:first-child{color:var(--text)!important}
 @keyframes drawer-in{from{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes fade-in{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

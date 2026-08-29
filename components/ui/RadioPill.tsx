@@ -19,11 +19,11 @@ export default function RadioPill({ checked, onChange, label, name }: Props) {
       }}
     >
       <input
+        className="sr-only"
         type="radio"
         name={name}
         checked={checked}
         onChange={onChange}
-        style={{ display: "none" }}
       />
 
       <span

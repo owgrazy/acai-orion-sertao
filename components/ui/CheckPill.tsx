@@ -18,10 +18,10 @@ export default function CheckPill({ checked, onChange, label }: Props) {
       }}
     >
       <input
+        className="sr-only"
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        style={{ display: "none" }}
       />
 
       <span
